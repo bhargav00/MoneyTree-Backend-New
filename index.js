@@ -371,6 +371,81 @@ function accept_order(req, res) {
     });
 }
 
+//update draft function
+function update_draft(req, res) {
+    pool.getConnection(function(err, connection) {
+        if (err) {
+            res.json({
+                "code": 100,
+                "status": "Error in connection database"
+            });
+            return;
+        }
+        connection.query('UPDATE orders SET side='+req.body.side+',symbol='+req.body.symbol+',total_qty='+req.body.total_qty+',limit_price='+req.body.limit_price+',stop_price='+req.body.stop_price+',current_price='+req.body.current_price+',order_timestamp=NOW(),et_id='+req.body.et_id+' WHERE order_id='+req.body.order_id,
+            function(err, rows, fields) {
+
+                if (!err) {
+                    res.json({ status: 'Successfully updated draft' });
+                    res.end();
+                } else {
+                    console.log(err);
+                    res.end();
+                }
+
+            })
+    });
+}
+
+//submit draft function
+function submit_draft(req, res) {
+    pool.getConnection(function(err, connection) {
+        if (err) {
+            res.json({
+                "code": 100,
+                "status": "Error in connection database"
+            });
+            return;
+        }
+        connection.query('UPDATE orders SET status="open",order_timestamp=NOW() WHERE order_id='+req.body.order_id,
+            function(err, rows, fields) {
+
+                if (!err) {
+                    res.json({ status: 'Successfully submitted draft' });
+                    res.end();
+                } else {
+                    console.log(err);
+                    res.end();
+                }
+
+            })
+    });
+}
+
+//delete draft function
+function delete_draft(req, res) {
+    pool.getConnection(function(err, connection) {
+        if (err) {
+            res.json({
+                "code": 100,
+                "status": "Error in connection database"
+            });
+            return;
+        }
+        connection.query('DELETE FROM orders WHERE order_id='+req.body.order_id,
+            function(err, rows, fields) {
+
+                if (!err) {
+                    res.json({ status: 'Successfully deleted draft' });
+                    res.end();
+                } else {
+                    console.log(err);
+                    res.end();
+                }
+
+            })
+    });
+}
+
 //login post method
 app.post('/login', function(req, res) {
     console.log('got login request');
@@ -447,6 +522,27 @@ app.post('/accept_order', function(req, res) {
     console.log('accept order request received');
     accept_order(req, res);
     console.log('order accepted');
+});
+
+//update draft post method
+app.post('/update_draft', function(req, res) {
+    console.log('draft update request received');
+    update_draft(req, res);
+    console.log('draft updated');
+});
+
+//submit draft post method
+app.post('/submit_draft', function(req, res) {
+    console.log('submit draft request received');
+    submit_draft(req, res);
+    console.log('draft submitted');
+});
+
+//delete draft post method
+app.post('/delete_draft', function(req, res) {
+    console.log('delete draft request received');
+    delete_draft(req, res);
+    console.log('draft deleted');
 });
 
 //server listening..........
