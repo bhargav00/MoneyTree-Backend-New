@@ -1,0 +1,26 @@
+{
+  "name": "money-tree-backend",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "body-parser": "^1.7.0",
+    "ejs": "^1.0.0",
+    "express": "^4.8.7",
+    "express-session": "^1.7.6",
+    "mysql": "^2.5.4",
+    "uuid": "^3.0.1"
+  },
+  "scripts": {
+    "start": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhargav00/Money-Tree-Backend.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bhargav00/Money-Tree-Backend/issues"
+  },
+  "homepage": "https://github.com/bhargav00/Money-Tree-Backend#readme"
+}
