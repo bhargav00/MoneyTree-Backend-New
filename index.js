@@ -28,7 +28,7 @@ app.use(function(req, res, next) {
 
 //login function
 function login(req, res) {
-    console.log('got login request');
+    
     if (req.body.username == null || req.body.password == null || req.body.type == null) {
         res.json({ status: 'incomplete data' });
         res.end();
@@ -95,11 +95,9 @@ function create_order(req, res, order_type) {
             } else {
                 status = 'draft';
             }
-            //console.log("INSERT INTO orders VALUES ('', '" + req.body.side + " ',' " + req.body.symbol + "', '" + req.body.quantity + "', '" + req.body.limit_price + "', '" + req.body.stop_loss + "', '" + req.body.quantity + "', '" + 0 + "', 'open',1,1 , '" + req.body.s_id + "','" + req.body.current_price + "','" + (new Date().toLocaleString()));
             connection
             .query("INSERT INTO orders VALUES (NULL, '" + req.body.side + " ',' " + req.body.symbol + "', '" + req.body.quantity + "', '" + req.body.limit_price + "', '" + req.body.stop_loss + "', '" + req.body.quantity + "', '" + 0 + "', '"+status+"',1,1 , '" + req.body.s_id + "','" + req.body.current_price + "','" + (new Date().toLocaleString()) + "')", function (err, rows, fields) {
                 
-                    //connection.release();
                     if (!err) {
                         res.json({ status: 'succesful' });
                         res.end();
@@ -112,6 +110,7 @@ function create_order(req, res, order_type) {
 
         });
 }
+
 //search component function
 function search(req, res) {
     pool
@@ -142,7 +141,6 @@ function search(req, res) {
 //order history function
 function history(req, res) {
     var access_type = 'pm';
-    console.log('got request');
     pool
         .getConnection(function(err, connection) {
             if (err) {
@@ -284,8 +282,6 @@ function get_et(req, res) {
                             res.end();
                         });
 
-                    // res.json();
-                    // res.end();
                 } else {
                     console.log(err);
                     res.end();
@@ -294,7 +290,6 @@ function get_et(req, res) {
             })
     });
 }
-
 
 
 //block creation
@@ -349,6 +344,7 @@ function create_block(req, res) {
             })
     });
 }
+
 //accept order function
 function accept_order(req, res) {
     pool.getConnection(function(err, connection) {
@@ -377,59 +373,80 @@ function accept_order(req, res) {
 
 //login post method
 app.post('/login', function(req, res) {
+    console.log('got login request');
     login(req, res);
+    console.log('Login successful');
 });
 
 //create draft post method
 app.post('/create_draft', function(req, res) {
-    console.log('Create Order request');
+    console.log('Create draft request received');
     create_order(req, res, 'draft');
+    console.log('Draft created');
 });
+
 //create order method
 app.post('/create_order', function(req, res) {
-    console.log('recieved order');
+    console.log('Create order request received');    
     create_order(req, res, 'order');
+    console.log('recieved order');
+    
 });
+
 //logout get method
 app.get('/logout', function(req, res) {
     console.log('got logout get request');
     res.json({ status: 'succesful' });
+    console.log('Logout successful');    
     res.end();
 });
+
 //search component get method
 app.get('/search/:string', function(req, res) {
+    console.log('stock search request received');
     search(req, res);
 });
 
 //order history method
 app.get('/history', function(req, res) {
+    console.log('order history request received');
     history(req, res);
+    console.log('order history sent');    
 });
 
 //get et method
 app.get('/get_et', function(req, res) {
+    console.log('et request received');    
     get_et(req, res);
+    console.log('et sent');
 });
 
 //view draft method
 app.get('/view_draft', function(req, res) {
     console.log('View Draft Request');
     view_order(req, res, 'draft');
+    console.log('draft details sent');
 });
 
 //order book method
 app.get('/order_book', function(req, res) {
     console.log('Order book Request');
     view_order(req, res, 'incomplete');
+    console.log('order book sent');
 });
+
 //create block method
 app.get('/create_block', function(req, res) {
     console.log('got create block request');
     create_block(req, res);
+    console.log('block created');
 });
+
 //accept order post method
 app.post('/accept_order', function(req, res) {
+    console.log('accept order request received');
     accept_order(req, res);
+    console.log('order accepted');
 });
 
 //server listening..........
