@@ -304,7 +304,6 @@ function create_block(req, res) {
             });
             return;
         }
-        result = [];
         connection.query('SELECT * FROM orders WHERE et_id =1 and status="accepted"',
             function (err, rows, fields) {
                 //connection.query('UPDATE orders SET status="blocked" WHERE et_id =1 and status="accepted"');
@@ -319,22 +318,25 @@ function create_block(req, res) {
                         var price, l_price, s_price;
                         for (var i = 0; i < rows.length; i++) {
                             var j = i + 1;
+                            price=rows[i].current_price;
+                            l_price=rows[i].limit_price;
+                            s_price=rows[i].limit_price;
                             if (rows[j] !== undefined && rows[i].prop == rows[j].prop) {
                                 sum = sum + rows[i].total_qty;
                                 price = Math.max(rows[i].current_price, rows[j].current_price);
                                 l_price = Math.max(rows[i].limit_price, rows[j].limit_price);
                                 s_price = Math.max(rows[i].stop_price, rows[j].stop_price);
                             } else {
-                                var total_qty = rows[i].total_qty + sum
+                                var total_qty = rows[i].total_qty + sum;
                                 sum = 0;
-                                connection.query('INSERT INTO block VALUES(NULL,' + rows[i].s_id + ',1,"' + rows[i].side + '","' + rows[i].symbol + '","open",' + price + ',' + l_price + ',' + s_price + ',' + total_qty + ',0,' + total_qty + ',"22")',
+                               connection.query('INSERT INTO block VALUES("",' + rows[i].s_id + ',1,"' + rows[i].side + '","' + rows[i].symbol + '","open",' + price + ',' + l_price + ',' + s_price + ',' + total_qty + ',0,' + total_qty + ',NOW())',
                                     function (err, rows, fields) {
                                         //connection.release();
                                         if (!err) {
-                                            connection.query('SELECT * from block where e_id=1', function (err, rows, fields) {
+                                            connection.query('SELECT * from block where et_id=1', function (err, rows, fields) {
                                                 var result=[];
                                                 data = {
-                                                    block_id: rows[0].et_id,
+                                                    block_id:rows[0].block_id,
                                                     side:rows[0].side,
                                                     symbol:rows[0].symbol,
                                                     current_price:rows[0].current_price,
