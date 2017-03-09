@@ -96,7 +96,7 @@ function create_order(req, res, order_type) {
                 status = 'draft';
             }
             connection
-                .query("INSERT INTO orders VALUES ('', '" + req.body.side + " ',' " + req.body.symbol + "', '" + req.body.quantity + "', '" + req.body.limit_price + "', '" + req.body.stop_loss + "', '" + req.body.quantity + "', '" + 0 + "', '" + status + "'," + req.body.et_id + ",1 , '" + req.body.s_id + "','" + req.body.current_price + "','" + (new Date().toLocaleString()) + "')", function (err, rows, fields) {
+                .query("INSERT INTO orders VALUES ('', '" + req.body.side + " ',' " + req.body.symbol + "', '" + req.body.quantity + "', '" + req.body.limit_price + "', '" + req.body.stop_price + "', '" + req.body.quantity + "', '" + 0 + "', '" + status + "'," + req.body.et_id + ",1 , '" + req.body.s_id + "','" + req.body.current_price + "','" + (new Date().toLocaleString()) + "')", function (err, rows, fields) {
 
                     if (!err) {
                         res.json({ status: 'succesful' });
@@ -190,7 +190,7 @@ function history(req, res) {
                             stop_price: rows[i].stop_price,
                             date: rows[i].date,
                             time: rows[i].time,
-                            status:rows[i].status
+                            status: rows[i].status
                         };
                         table.push(obj);
                     }
@@ -306,7 +306,7 @@ function create_block(req, res) {
         }
         connection.query('SELECT * FROM orders WHERE et_id =1 and status="accepted"',
             function (err, rows, fields) {
-                //connection.query('UPDATE orders SET status="blocked" WHERE et_id =1 and status="accepted"');
+                connection.query('UPDATE orders SET status="blocked" WHERE et_id =1 and status="accepted"');
                 if (!err) {
                     if (rows.length >= 1) {
                         for (var i = 0; i < rows.length; i++) {
@@ -316,11 +316,12 @@ function create_block(req, res) {
                         var block = [];
                         var sum = 0;
                         var price, l_price, s_price;
-                        for (var i = 0; i < rows.length; i++) {
+                        var result = [];
+                        for (var i = 0; i < rows.length - 1; i++) {
                             var j = i + 1;
-                            price=rows[i].current_price;
-                            l_price=rows[i].limit_price;
-                            s_price=rows[i].limit_price;
+                            price = rows[i].current_price;
+                            l_price = rows[i].limit_price;
+                            s_price = rows[i].limit_price;
                             if (rows[j] !== undefined && rows[i].prop == rows[j].prop) {
                                 sum = sum + rows[i].total_qty;
                                 price = Math.max(rows[i].current_price, rows[j].current_price);
@@ -329,22 +330,21 @@ function create_block(req, res) {
                             } else {
                                 var total_qty = rows[i].total_qty + sum;
                                 sum = 0;
-                               connection.query('INSERT INTO block VALUES("",' + rows[i].s_id + ',1,"' + rows[i].side + '","' + rows[i].symbol + '","open",' + price + ',' + l_price + ',' + s_price + ',' + total_qty + ',0,' + total_qty + ',NOW())',
+                                connection.query('INSERT INTO block VALUES("",' + rows[i].s_id + ',1,"' + rows[i].side + '","' + rows[i].symbol + '","open",' + price + ',' + l_price + ',' + s_price + ',' + total_qty + ',0,' + total_qty + ',NOW())',
                                     function (err, rows, fields) {
                                         //connection.release();
                                         if (!err) {
                                             connection.query('SELECT * from block where et_id=1', function (err, rows, fields) {
-                                                var result=[];
                                                 data = {
-                                                    block_id:rows[0].block_id,
-                                                    side:rows[0].side,
-                                                    symbol:rows[0].symbol,
-                                                    current_price:rows[0].current_price,
-                                                    limit_price:rows[0].limit_price
+                                                    block_id: rows[0].block_id,
+                                                    side: rows[0].side,
+                                                    symbol: rows[0].symbol,
+                                                    current_price: rows[0].current_price,
+                                                    limit_price: rows[0].limit_price
                                                 };
+                                                console.log("result");
                                                 result.push(data);
-                                                res.json(result);
-                                                res.end();
+
                                             });
                                         } else {
                                             console.log(err);
@@ -354,6 +354,12 @@ function create_block(req, res) {
 
                             }
                         }
+                        setTimeout(function () {
+                            console.log('Blah blah blah blah extra-blah');
+                            res.json(result);
+                            res.end();
+                        }, 700);
+
                     }
                     else {
                         res.json({ status: 'all block already created' });
@@ -361,7 +367,7 @@ function create_block(req, res) {
                     }
                 } else {
                     console.log(err);
-                    res.end('eee');
+                    res.end();
                 }
             })
     });
@@ -462,6 +468,13 @@ function delete_draft(req, res) {
         connection.query('UPDATE orders SET status="deleted" WHERE order_id=' + req.body.order_id,
             function (err, rows, fields) {
                 connection.release();
+                if (!err) {
+                    res.json({ status: 'Successfully deleted draft' });
+                    res.end();
+                } else {
+                    console.log(err);
+                    res.end();
+                }
 
             })
     });
