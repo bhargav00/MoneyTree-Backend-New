@@ -431,11 +431,36 @@ function delete_draft(req, res) {
             });
             return;
         }
-        connection.query('DELETE FROM orders WHERE order_id='+req.body.order_id,
+        connection.query('UPDATE orders SET status="deleted" WHERE order_id='+req.body.order_id,
             function(err, rows, fields) {
 
                 if (!err) {
                     res.json({ status: 'Successfully deleted draft' });
+                    res.end();
+                } else {
+                    console.log(err);
+                    res.end();
+                }
+
+            })
+    });
+}
+
+//execute block function
+function execute_block(req, res) {
+    pool.getConnection(function(err, connection) {
+        if (err) {
+            res.json({
+                "code": 100,
+                "status": "Error in connection database"
+            });
+            return;
+        }
+        connection.query('UPDATE block SET status="executed",block_timestamp=NOW() WHERE block_id='+req.body.block_id,
+            function(err, rows, fields) {
+
+                if (!err) {
+                    res.json({ status: 'Block sent to broker' });
                     res.end();
                 } else {
                     console.log(err);
@@ -543,6 +568,13 @@ app.post('/delete_draft', function(req, res) {
     console.log('delete draft request received');
     delete_draft(req, res);
     console.log('draft deleted');
+});
+
+//execute block post method
+app.post('/execute_block', function(req, res) {
+    console.log('block execution request received');
+    execute_block(req, res);
+    console.log('block executed');
 });
 
 //server listening..........
