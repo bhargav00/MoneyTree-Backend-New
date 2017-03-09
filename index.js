@@ -20,7 +20,7 @@ app.use(session({ secret: 'ssshhhhh', saveUninitialized: true, resave: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 //Below code is to enable CORS in node server
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
@@ -28,14 +28,14 @@ app.use(function(req, res, next) {
 
 //login function
 function login(req, res) {
-    
+
     if (req.body.username == null || req.body.password == null || req.body.type == null) {
         res.json({ status: 'incomplete data' });
         res.end();
         return;
     }
     pool
-        .getConnection(function(err, connection) {
+        .getConnection(function (err, connection) {
             if (err) {
                 res.json({ "code": 100, "status": "Error in connection database" });
                 return;
@@ -52,7 +52,7 @@ function login(req, res) {
                 return;
             }
             connection
-                .query('SELECT * from ' + table_name + ' where username="' + req.body.username + '" and password="' + req.body.password + '"', function(err, rows, fields) {
+                .query('SELECT * from ' + table_name + ' where username="' + req.body.username + '" and password="' + req.body.password + '"', function (err, rows, fields) {
                     if (!err) {
                         if (rows.length == 1) {
                             connection.release();
@@ -67,7 +67,7 @@ function login(req, res) {
                         res.end();
                     }
                 });
-            connection.on('error', function(err) {
+            connection.on('error', function (err) {
                 res.json({ "status": "Error in connection database" });
                 return;
             });
@@ -84,7 +84,7 @@ function create_order(req, res, order_type) {
     }
 
     pool
-        .getConnection(function(err, connection) {
+        .getConnection(function (err, connection) {
             if (err) {
                 res.json({ "code": 100, "status": "Error in connection database" });
                 return;
@@ -96,8 +96,8 @@ function create_order(req, res, order_type) {
                 status = 'draft';
             }
             connection
-            .query("INSERT INTO orders VALUES (NULL, '" + req.body.side + " ',' " + req.body.symbol + "', '" + req.body.quantity + "', '" + req.body.limit_price + "', '" + req.body.stop_loss + "', '" + req.body.quantity + "', '" + 0 + "', '"+status+"',1,1 , '" + req.body.s_id + "','" + req.body.current_price + "','" + (new Date().toLocaleString()) + "')", function (err, rows, fields) {
-                
+                .query("INSERT INTO orders VALUES ('', '" + req.body.side + " ',' " + req.body.symbol + "', '" + req.body.quantity + "', '" + req.body.limit_price + "', '" + req.body.stop_loss + "', '" + req.body.quantity + "', '" + 0 + "', '" + status + "'," + req.body.et_id + ",1 , '" + req.body.s_id + "','" + req.body.current_price + "','" + (new Date().toLocaleString()) + "')", function (err, rows, fields) {
+
                     if (!err) {
                         res.json({ status: 'succesful' });
                         res.end();
@@ -114,13 +114,13 @@ function create_order(req, res, order_type) {
 //search component function
 function search(req, res) {
     pool
-        .getConnection(function(err, connection) {
+        .getConnection(function (err, connection) {
             if (err) {
                 res.json({ "code": 100, "status": "Error in connection database" });
                 return;
             }
             connection.query('SELECT * from stock where stock_name like"' + req.params.string + "%" + '"  ',
-                function(err, rows, fields) {
+                function (err, rows, fields) {
 
                     if (err) throw err;
                     var stock = [];
@@ -142,7 +142,7 @@ function search(req, res) {
 function history(req, res) {
     var access_type = 'pm';
     pool
-        .getConnection(function(err, connection) {
+        .getConnection(function (err, connection) {
             if (err) {
                 res.json({ "code": 100, "status": "Error in connection database" });
                 return;
@@ -170,10 +170,10 @@ function history(req, res) {
             }
 
             //selection from db
-            var sel = 'order_id,stock_name,name,side,symbol,total_qty,limit_price,stop_price,date(order_timestamp) as date,time(order_timestamp) as time';
+            var sel = 'order_id,stock_name,name,side,symbol,total_qty,limit_price,stop_price,date(order_timestamp) as date,time(order_timestamp) as time,status';
             //sql query
             connection.query('SELECT ' + sel + ' FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN ' + table_name + '  on orders.' + id + '=' + table_name + '.' + id + ' WHERE ' + id2 + '=' + u_id + '',
-                function(err, rows, fields) {
+                function (err, rows, fields) {
 
                     if (err) throw err;
 
@@ -190,6 +190,7 @@ function history(req, res) {
                             stop_price: rows[i].stop_price,
                             date: rows[i].date,
                             time: rows[i].time,
+                            status:rows[i].status
                         };
                         table.push(obj);
                     }
@@ -204,7 +205,7 @@ function history(req, res) {
 //function for order book and draft view
 function view_order(req, res, status) {
     id = 1;
-    pool.getConnection(function(err, connection) {
+    pool.getConnection(function (err, connection) {
         if (err) {
             res.json({
                 "code": 100,
@@ -214,9 +215,10 @@ function view_order(req, res, status) {
         }
 
         if (status === 'draft') {
-            connection.query('SELECT order_id,side,symbol,total_qty,limit_price,stop_price,status,current_price,order_timestamp as timestamp,equity_trader.name as trader FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN equity_trader on orders.et_id=equity_trader.et_id INNER JOIN portfolio_manager on orders.pm_id=portfolio_manager.pm_id WHERE orders.status = "draft"',
-                function(err, rows, fields) {
+            connection.query('SELECT order_id,side,symbol,total_qty,limit_price,stop_price,current_price,order_timestamp as timestamp,equity_trader.name as trader,status FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN equity_trader on orders.et_id=equity_trader.et_id INNER JOIN portfolio_manager on orders.pm_id=portfolio_manager.pm_id WHERE orders.status = "draft"',
+                function (err, rows, fields) {
                     var table = [];
+                    console.log(rows);
                     for (i = 0; i < rows.length; i++) {
                         data = rows[i];
                         table.push(data);
@@ -227,7 +229,7 @@ function view_order(req, res, status) {
                 });
         } else if (status == 'incomplete') {
             connection.query('SELECT * FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN portfolio_manager on orders.pm_id=portfolio_manager.pm_id INNER JOIN equity_trader on orders.et_id=equity_trader.et_id WHERE orders.status = "open" ',
-                function(err, rows, fields) {
+                function (err, rows, fields) {
                     var table = [];
                     for (i = 0; i < rows.length; i++) {
                         data = rows[i];
@@ -244,7 +246,7 @@ function view_order(req, res, status) {
 
 // get et data
 function get_et(req, res) {
-    pool.getConnection(function(err, connection) {
+    pool.getConnection(function (err, connection) {
         if (err) {
             res.json({
                 "code": 100,
@@ -255,13 +257,13 @@ function get_et(req, res) {
         result = [];
         connection.query('SELECT et_id FROM pm_et_relations WHERE pm_id =1',
 
-            function(err, rows, fields) {
+            function (err, rows, fields) {
                 connection.release();
 
                 if (!err) {
                     for (i = 0; i < rows.length - 1; i++) {
                         connection.query('SELECT name ,et_id  FROM equity_trader WHERE et_id =' + rows[i].et_id,
-                            function(err, rows_et, fields) {
+                            function (err, rows_et, fields) {
                                 data = {
                                     id: rows_et[0].et_id,
                                     name: rows_et[0].name
@@ -271,7 +273,7 @@ function get_et(req, res) {
 
                     };
                     connection.query('SELECT name ,et_id  FROM equity_trader WHERE et_id =' + rows[i].et_id,
-                        function(err, rows_et, fields) {
+                        function (err, rows_et, fields) {
                             data = {
                                 id: rows_et[0].et_id,
                                 name: rows_et[0].name
@@ -294,7 +296,7 @@ function get_et(req, res) {
 
 //block creation
 function create_block(req, res) {
-    pool.getConnection(function(err, connection) {
+    pool.getConnection(function (err, connection) {
         if (err) {
             res.json({
                 "code": 100,
@@ -303,43 +305,61 @@ function create_block(req, res) {
             return;
         }
         result = [];
-        connection.query('SELECT * FROM block WHERE et_id =1 and status="open"',
-            function(err, rows, fields) {
-                connection.release();
-
+        connection.query('SELECT * FROM orders WHERE et_id =1 and status="accepted"',
+            function (err, rows, fields) {
+                //connection.query('UPDATE orders SET status="blocked" WHERE et_id =1 and status="accepted"');
                 if (!err) {
-                    //console.log(rows);
-                    // var temp_qty = 0,flag;
-                    // for (i = 0; i < rows.length - 1; i++) {
-                    //     var current_token = rows[i].s_id + rows[i].side + rows[i].symbol;
-                    //     temp_qty = rows[i].total_qty;
-                    //     for (j = i + 1; j < rows.length; j++) {
-                    //         var next_token = rows[j].s_id + rows[j].side + rows[j].symbol;
-                    //         if (current_token == next_token) {
-                    //             //
-                    //             if(i==rows.length-2)
-                    //             {
-                    //                 //block creation 
-                    //             }
-                    //             temp_qty += rows[j].total_qty;
-                    //             console.log(temp_qty);
-                    //             i++;
-                    //         }
-                    //         else {
-                    //             console.log(temp_qty);
-                    //             //DB block creation logic
-                    //             break;
-                    //         }
-                    //     }
-                    //    flag=i;
-                    // }
-                    // if(flag==rows.length-2){}
-                    // res.json(temp_qty);
-                    res.json(rows);
-                    res.end();
+                    if (rows.length >= 1) {
+                        for (var i = 0; i < rows.length; i++) {
+                            rows[i].prop = (rows[i].s_id + rows[i].side + rows[i].symbol);
+                        }
+                        rows.sort(function (a, b) { return (a.prop > b.prop) ? 1 : ((b.prop > a.prop) ? -1 : 0); });
+                        var block = [];
+                        var sum = 0;
+                        var price, l_price, s_price;
+                        for (var i = 0; i < rows.length; i++) {
+                            var j = i + 1;
+                            if (rows[j] !== undefined && rows[i].prop == rows[j].prop) {
+                                sum = sum + rows[i].total_qty;
+                                price = Math.max(rows[i].current_price, rows[j].current_price);
+                                l_price = Math.max(rows[i].limit_price, rows[j].limit_price);
+                                s_price = Math.max(rows[i].stop_price, rows[j].stop_price);
+                            } else {
+                                var total_qty = rows[i].total_qty + sum
+                                sum = 0;
+                                connection.query('INSERT INTO block VALUES(NULL,' + rows[i].s_id + ',1,"' + rows[i].side + '","' + rows[i].symbol + '","open",' + price + ',' + l_price + ',' + s_price + ',' + total_qty + ',0,' + total_qty + ',"22")',
+                                    function (err, rows, fields) {
+                                        //connection.release();
+                                        if (!err) {
+                                            connection.query('SELECT * from block where e_id=1', function (err, rows, fields) {
+                                                var result=[];
+                                                data = {
+                                                    block_id: rows[0].et_id,
+                                                    side:rows[0].side,
+                                                    symbol:rows[0].symbol,
+                                                    current_price:rows[0].current_price,
+                                                    limit_price:rows[0].limit_price
+                                                };
+                                                result.push(data);
+                                                res.json(result);
+                                                res.end();
+                                            });
+                                        } else {
+                                            console.log(err);
+                                            res.end();
+                                        }
+                                    });
+
+                            }
+                        }
+                    }
+                    else {
+                        res.json({ status: 'all block already created' });
+                        res.end();
+                    }
                 } else {
                     console.log(err);
-                    res.end();
+                    res.end('eee');
                 }
             })
     });
@@ -347,7 +367,7 @@ function create_block(req, res) {
 
 //accept order function
 function accept_order(req, res) {
-    pool.getConnection(function(err, connection) {
+    pool.getConnection(function (err, connection) {
         if (err) {
             res.json({
                 "code": 100,
@@ -356,7 +376,7 @@ function accept_order(req, res) {
             return;
         }
         connection.query('UPDATE orders SET status="accepted" WHERE order_id =' + req.body.order_id,
-            function(err, rows, fields) {
+            function (err, rows, fields) {
                 connection.release();
 
                 if (!err) {
@@ -373,7 +393,7 @@ function accept_order(req, res) {
 
 //update draft function
 function update_draft(req, res) {
-    pool.getConnection(function(err, connection) {
+    pool.getConnection(function (err, connection) {
         if (err) {
             res.json({
                 "code": 100,
@@ -381,9 +401,13 @@ function update_draft(req, res) {
             });
             return;
         }
-        connection.query('UPDATE orders SET side='+req.body.side+',symbol='+req.body.symbol+',total_qty='+req.body.total_qty+',limit_price='+req.body.limit_price+',stop_price='+req.body.stop_price+',current_price='+req.body.current_price+',order_timestamp=NOW(),et_id='+req.body.et_id+' WHERE order_id='+req.body.order_id,
-            function(err, rows, fields) {
+        if (req.body.et_id == undefined) {
+            req.body.et_id = 7;
+        }
 
+        connection.query('UPDATE orders SET side="' + req.body.side + '",symbol="' + req.body.symbol + '",total_qty=' + req.body.total_qty + ',limit_price=' + req.body.limit_price + ',stop_price=' + req.body.stop_price + ',current_price=' + req.body.current_price + ',order_timestamp=NOW(),et_id=' + req.body.et_id + ' WHERE order_id=' + req.body.order_id,
+            function (err, rows, fields) {
+                connection.release();
                 if (!err) {
                     res.json({ status: 'Successfully updated draft' });
                     res.end();
@@ -393,12 +417,14 @@ function update_draft(req, res) {
                 }
 
             })
+
     });
+
 }
 
 //submit draft function
 function submit_draft(req, res) {
-    pool.getConnection(function(err, connection) {
+    pool.getConnection(function (err, connection) {
         if (err) {
             res.json({
                 "code": 100,
@@ -406,9 +432,9 @@ function submit_draft(req, res) {
             });
             return;
         }
-        connection.query('UPDATE orders SET status="open",order_timestamp=NOW() WHERE order_id='+req.body.order_id,
-            function(err, rows, fields) {
-
+        connection.query('UPDATE orders SET status="open",order_timestamp=NOW() WHERE order_id=' + req.body.order_id,
+            function (err, rows, fields) {
+                connection.release();
                 if (!err) {
                     res.json({ status: 'Successfully submitted draft' });
                     res.end();
@@ -423,7 +449,7 @@ function submit_draft(req, res) {
 
 //delete draft function
 function delete_draft(req, res) {
-    pool.getConnection(function(err, connection) {
+    pool.getConnection(function (err, connection) {
         if (err) {
             res.json({
                 "code": 100,
@@ -431,16 +457,9 @@ function delete_draft(req, res) {
             });
             return;
         }
-        connection.query('UPDATE orders SET status="deleted" WHERE order_id='+req.body.order_id,
-            function(err, rows, fields) {
-
-                if (!err) {
-                    res.json({ status: 'Successfully deleted draft' });
-                    res.end();
-                } else {
-                    console.log(err);
-                    res.end();
-                }
+        connection.query('UPDATE orders SET status="deleted" WHERE order_id=' + req.body.order_id,
+            function (err, rows, fields) {
+                connection.release();
 
             })
     });
@@ -448,7 +467,7 @@ function delete_draft(req, res) {
 
 //execute block function
 function execute_block(req, res) {
-    pool.getConnection(function(err, connection) {
+    pool.getConnection(function (err, connection) {
         if (err) {
             res.json({
                 "code": 100,
@@ -456,9 +475,9 @@ function execute_block(req, res) {
             });
             return;
         }
-        connection.query('UPDATE block SET status="executed",block_timestamp=NOW() WHERE block_id='+req.body.block_id,
-            function(err, rows, fields) {
-
+        connection.query('UPDATE block SET status="executed",block_timestamp=NOW() WHERE block_id=' + req.body.block_id,
+            function (err, rows, fields) {
+                connection.release();
                 if (!err) {
                     res.json({ status: 'Block sent to broker' });
                     res.end();
@@ -472,106 +491,106 @@ function execute_block(req, res) {
 }
 
 //login post method
-app.post('/login', function(req, res) {
+app.post('/login', function (req, res) {
     console.log('got login request');
     login(req, res);
     console.log('Login successful');
 });
 
 //create draft post method
-app.post('/create_draft', function(req, res) {
+app.post('/create_draft', function (req, res) {
     console.log('Create draft request received');
     create_order(req, res, 'draft');
     console.log('Draft created');
 });
 
 //create order method
-app.post('/create_order', function(req, res) {
-    console.log('Create order request received');    
+app.post('/create_order', function (req, res) {
+    console.log('Create order request received');
     create_order(req, res, 'order');
     console.log('recieved order');
-    
+
 });
 
 //logout get method
-app.get('/logout', function(req, res) {
+app.get('/logout', function (req, res) {
     console.log('got logout get request');
     res.json({ status: 'succesful' });
-    console.log('Logout successful');    
+    console.log('Logout successful');
     res.end();
 });
 
 //search component get method
-app.get('/search/:string', function(req, res) {
+app.get('/search/:string', function (req, res) {
     console.log('stock search request received');
     search(req, res);
 });
 
 //order history method
-app.get('/history', function(req, res) {
+app.get('/history', function (req, res) {
     console.log('order history request received');
     history(req, res);
-    console.log('order history sent');    
+    console.log('order history sent');
 });
 
 //get et method
-app.get('/get_et', function(req, res) {
-    console.log('et request received');    
+app.get('/get_et', function (req, res) {
+    console.log('et request received');
     get_et(req, res);
     console.log('et sent');
 });
 
 //view draft method
-app.get('/view_draft', function(req, res) {
+app.get('/view_draft', function (req, res) {
     console.log('View Draft Request');
     view_order(req, res, 'draft');
     console.log('draft details sent');
 });
 
 //order book method
-app.get('/order_book', function(req, res) {
+app.get('/order_book', function (req, res) {
     console.log('Order book Request');
     view_order(req, res, 'incomplete');
     console.log('order book sent');
 });
 
 //create block method
-app.get('/create_block', function(req, res) {
+app.get('/create_block', function (req, res) {
     console.log('got create block request');
     create_block(req, res);
     console.log('block created');
 });
 
 //accept order post method
-app.post('/accept_order', function(req, res) {
+app.post('/accept_order', function (req, res) {
     console.log('accept order request received');
     accept_order(req, res);
     console.log('order accepted');
 });
 
 //update draft post method
-app.post('/update_draft', function(req, res) {
+app.post('/update_draft', function (req, res) {
     console.log('draft update request received');
     update_draft(req, res);
     console.log('draft updated');
 });
 
 //submit draft post method
-app.post('/submit_draft', function(req, res) {
+app.post('/submit_draft', function (req, res) {
     console.log('submit draft request received');
     submit_draft(req, res);
     console.log('draft submitted');
 });
 
 //delete draft post method
-app.post('/delete_draft', function(req, res) {
+app.post('/delete_draft', function (req, res) {
     console.log('delete draft request received');
     delete_draft(req, res);
     console.log('draft deleted');
 });
 
 //execute block post method
-app.post('/execute_block', function(req, res) {
+app.post('/execute_block', function (req, res) {
     console.log('block execution request received');
     execute_block(req, res);
     console.log('block executed');
