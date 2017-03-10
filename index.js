@@ -96,8 +96,8 @@ function create_order(req, res, order_type) {
                 status = 'draft';
             }
             connection
-                .query("INSERT INTO orders VALUES ('', '" + req.body.side + " ',' " + req.body.symbol + "', '" + req.body.quantity + "', '" + req.body.limit_price + "', '" + req.body.stop_price + "', '" + req.body.quantity + "', '" + 0 + "', '" + status + "'," + req.body.et_id + ",1 , '" + req.body.s_id + "','" + req.body.current_price + "','" + (new Date().toLocaleString()) + "')", function (err, rows, fields) {
-
+                .query("INSERT INTO orders VALUES ('', '" + req.body.side + " ',' " + req.body.symbol + "', '" + req.body.quantity + "', '" + req.body.limit_price + "', '" + req.body.stop_price + "', '" + req.body.quantity + "', '" + 0 + "', '" + status + "'," + req.body.et_id + ",1 , '" + req.body.s_id + "','" + req.body.current_price + "',NOW())", function (err, rows, fields) {
+                    connection.release();
                     if (!err) {
                         res.json({ status: 'succesful' });
                         res.end();
@@ -121,7 +121,6 @@ function search(req, res) {
             }
             connection.query('SELECT * from stock where stock_name like"' + req.params.string + "%" + '"  ',
                 function (err, rows, fields) {
-
                     if (err) throw err;
                     var stock = [];
                     for (i = 0; i < rows.length; i++) {
@@ -133,6 +132,24 @@ function search(req, res) {
                         stock.push(obj);
                     }
                     res.json({ stock });
+                    res.end();
+                });
+        });
+}
+
+//get username function
+function get_user(req, res) {
+    pool
+        .getConnection(function (err, connection) {
+            if (err) {
+                res.json({ "code": 100, "status": "Error in connection database" });
+                return;
+            }
+            connection.query('SELECT name from portfolio_manager where pm_id=1',
+                function (err, rows, fields) {
+                    if (err) throw err;
+                    var name = rows[0].name;
+                    res.json({ name });
                     res.end();
                 });
         });
@@ -172,9 +189,9 @@ function history(req, res) {
             //selection from db
             var sel = 'order_id,stock_name,name,side,symbol,total_qty,limit_price,stop_price,date(order_timestamp) as date,time(order_timestamp) as time,status';
             //sql query
-            connection.query('SELECT ' + sel + ' FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN ' + table_name + '  on orders.' + id + '=' + table_name + '.' + id + ' WHERE ' + id2 + '=' + u_id + '',
+            connection.query('SELECT ' + sel + ' FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN ' + table_name + '  on orders.' + id + '=' + table_name + '.' + id + ' WHERE ' + id2 + '=' + u_id + ' AND status<>"deleted"',
                 function (err, rows, fields) {
-
+                    connection.release();
                     if (err) throw err;
 
                     var table = [];
@@ -217,6 +234,7 @@ function view_order(req, res, status) {
         if (status === 'draft') {
             connection.query('SELECT order_id,side,symbol,total_qty,limit_price,stop_price,current_price,order_timestamp as timestamp,equity_trader.name as trader,status FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN equity_trader on orders.et_id=equity_trader.et_id INNER JOIN portfolio_manager on orders.pm_id=portfolio_manager.pm_id WHERE orders.status = "draft"',
                 function (err, rows, fields) {
+                    connection.release();
                     var table = [];
                     console.log(rows);
                     for (i = 0; i < rows.length; i++) {
@@ -306,9 +324,9 @@ function create_block(req, res) {
         }
         connection.query('SELECT * FROM orders WHERE et_id =1 and status="accepted"',
             function (err, rows, fields) {
-                connection.query('UPDATE orders SET status="blocked" WHERE et_id =1 and status="accepted"');
+                connection.query('UPDATE orders SET status="executed" WHERE et_id =1 and status="accepted"');
                 if (!err) {
-                    if (rows.length >= 1) {
+                    if (rows.length > 1) {
                         for (var i = 0; i < rows.length; i++) {
                             rows[i].prop = (rows[i].s_id + rows[i].side + rows[i].symbol);
                         }
@@ -342,7 +360,7 @@ function create_block(req, res) {
                                                     current_price: rows[0].current_price,
                                                     limit_price: rows[0].limit_price
                                                 };
-                                                console.log("result");
+
                                                 result.push(data);
 
                                             });
@@ -355,11 +373,23 @@ function create_block(req, res) {
                             }
                         }
                         setTimeout(function () {
-                            console.log('Blah blah blah blah extra-blah');
+                            
                             res.json(result);
                             res.end();
                         }, 700);
 
+                    }
+                    else if (rows.length == 1) {
+                        connection.query('INSERT INTO block VALUES("",' + rows[0].s_id + ',1,"' + rows[0].side + '","' + rows[0].symbol + '","open",' + rows[0].current_price + ',' + rows[0].limit_price + ',' + rows[0].stop_price + ',' + rows[0].total_qty + ',0,' + rows[0].total_qty + ',NOW())',
+                            function (err, rows, fields) {
+                                //connection.release();
+                                if (!err) {
+                                    view_block(req, res,'open');
+                                } else {
+                                    console.log(err);
+                                    res.end();
+                                }
+                            });
                     }
                     else {
                         res.json({ status: 'all block already created' });
@@ -480,6 +510,63 @@ function delete_draft(req, res) {
     });
 }
 
+//function for block display
+function view_block(req, res, status) {
+    pool.getConnection(function (err, connection) {
+        if (err) {
+            res.json({
+                "code": 100,
+                "status": "Error in connection database"
+            });
+            return;
+        }
+        if (status === 'open') {
+            connection.query('SELECT * FROM block INNER JOIN stock on block.s_id=stock.s_id WHERE status = "open" and block.et_id=1',
+                function (err, rows, fields) {
+                    connection.release();
+                    var table = [];
+                    for (i = 0; i < rows.length; i++) {
+                        var data = {
+                            block_id: rows[i].block_id,
+                            side: rows[i].side,
+                            symbol: rows[i].symbol,
+                            total_qty: rows[i].total_qty,
+                            current_price: rows[i].current_price,
+                            limit_price: rows[i].limit_price,
+                            stop_price: rows[i].stop_price,
+                            stock_name:rows[i].stock_name
+                        };
+                        table.push(data);
+                    }
+                    res.json({ table });
+                    res.end();
+                });
+        } else if (status === 'executed') {
+            connection.query('SELECT * FROM block INNER JOIN stock on block.s_id=stock.s_id WHERE status = "executed" and et_id=1',
+                function (err, rows, fields) {
+                    var table = [];
+                    for (i = 0; i < rows.length; i++) {
+                        var data = {
+                            block_id: rows[i].block_id,
+                            side: rows[i].side,
+                            symbol: rows[i].symbol,
+                            total_qty: rows[i].total_qty,
+                            current_price: rows[i].current_price,
+                            limit_price: rows[i].limit_price,
+                            stop_price: rows[i].stop_price,
+                            timestamp: rows[i].block_timestamp,
+                            stock_name:rows[i].stock_name
+                        };
+                        table.push(data);
+                    }
+                    res.json({ table });
+                    res.end();
+                });
+        }
+    });
+
+}
+
 //execute block function
 function execute_block(req, res) {
     pool.getConnection(function (err, connection) {
@@ -539,6 +626,12 @@ app.get('/logout', function (req, res) {
 app.get('/search/:string', function (req, res) {
     console.log('stock search request received');
     search(req, res);
+});
+
+//search component get method
+app.get('/get_user', function (req, res) {
+    console.log('username request received');
+    get_user(req, res);
 });
 
 //order history method
@@ -602,6 +695,22 @@ app.post('/delete_draft', function (req, res) {
     console.log('delete draft request received');
     delete_draft(req, res);
     console.log('draft deleted');
+});
+
+//view pending block method
+app.get('/view_pending_block', function (req, res) {
+    console.log('pending block request received');
+    view_block(req, res, 'open');
+    console.log('pending blocks sent');
+
+});
+
+//view executed block method
+app.get('/view_executed_block', function (req, res) {
+    console.log('executed block request received');
+    view_block(req, res, 'executed');
+    console.log('executed block sent');
+
 });
 
 //execute block post method
