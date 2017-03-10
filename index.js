@@ -719,7 +719,10 @@ app.post('/execute_block', function (req, res) {
     execute_block(req, res);
     console.log('block executed');
 });
-
+app.get('/get_index', function (req, res) {
+    res.json({sensex:12014,nifty:5514});
+    res.end();
+});
 //server listening..........
 app.listen(3000);
 console.log("Server started on 3000 ... nn");
