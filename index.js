@@ -187,7 +187,7 @@ function history(req, res) {
             }
 
             //selection from db
-            var sel = 'order_id,stock_name,name,side,symbol,total_qty,limit_price,stop_price,date(order_timestamp) as date,time(order_timestamp) as time,status';
+            var sel = 'order_id,stock_name,name,side,symbol,total_qty,limit_price,stop_price,order_timestamp,status';
             //sql query
             connection.query('SELECT ' + sel + ' FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN ' + table_name + '  on orders.' + id + '=' + table_name + '.' + id + ' WHERE ' + id2 + '=' + u_id + ' AND status<>"deleted"',
                 function (err, rows, fields) {
@@ -205,8 +205,7 @@ function history(req, res) {
                             total_qty: rows[i].total_qty,
                             limit_price: rows[i].limit_price,
                             stop_price: rows[i].stop_price,
-                            date: rows[i].date,
-                            time: rows[i].time,
+                            timestamp: rows[i].order_timestamp,
                             status: rows[i].status
                         };
                         table.push(obj);
@@ -232,7 +231,7 @@ function view_order(req, res, status) {
         }
 
         if (status === 'draft') {
-            connection.query('SELECT order_id,side,symbol,total_qty,limit_price,stop_price,current_price,order_timestamp as timestamp,equity_trader.name as trader,status FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN equity_trader on orders.et_id=equity_trader.et_id INNER JOIN portfolio_manager on orders.pm_id=portfolio_manager.pm_id WHERE orders.status = "draft"',
+            connection.query('SELECT order_id,stock_name,side,symbol,total_qty,limit_price,stop_price,current_price,order_timestamp as timestamp,equity_trader.name as trader,status FROM orders INNER JOIN stock on orders.s_id=stock.s_id INNER JOIN equity_trader on orders.et_id=equity_trader.et_id INNER JOIN portfolio_manager on orders.pm_id=portfolio_manager.pm_id WHERE orders.status = "draft"',
                 function (err, rows, fields) {
                     connection.release();
                     var table = [];
@@ -373,7 +372,7 @@ function create_block(req, res) {
                             }
                         }
                         setTimeout(function () {
-                            
+
                             res.json(result);
                             res.end();
                         }, 700);
@@ -384,7 +383,7 @@ function create_block(req, res) {
                             function (err, rows, fields) {
                                 //connection.release();
                                 if (!err) {
-                                    view_block(req, res,'open');
+                                    view_block(req, res, 'open');
                                 } else {
                                     console.log(err);
                                     res.end();
@@ -443,7 +442,7 @@ function update_draft(req, res) {
             req.body.et_id = 7;
         }
 
-        connection.query('UPDATE orders SET side="' + req.body.side + '",symbol="' + req.body.symbol + '",total_qty=' + req.body.total_qty + ',limit_price=' + req.body.limit_price + ',stop_price=' + req.body.stop_price + ',current_price=' + req.body.current_price + ',order_timestamp=NOW(),et_id=' + req.body.et_id + ' WHERE order_id=' + req.body.order_id,
+        connection.query('UPDATE orders SET side="' + req.body.side + '",symbol="' + req.body.symbol + '",total_qty=' + req.body.total_qty + ',limit_price=' + req.body.limit_price + ',stop_price=' + req.body.stop_price + ',open_qty=' + req.body.total_qty + ',current_price=' + req.body.current_price + ',order_timestamp=NOW(),et_id=' + req.body.et_id + ' WHERE order_id=' + req.body.order_id,
             function (err, rows, fields) {
                 connection.release();
                 if (!err) {
@@ -534,7 +533,7 @@ function view_block(req, res, status) {
                             current_price: rows[i].current_price,
                             limit_price: rows[i].limit_price,
                             stop_price: rows[i].stop_price,
-                            stock_name:rows[i].stock_name
+                            stock_name: rows[i].stock_name
                         };
                         table.push(data);
                     }
@@ -555,7 +554,7 @@ function view_block(req, res, status) {
                             limit_price: rows[i].limit_price,
                             stop_price: rows[i].stop_price,
                             timestamp: rows[i].block_timestamp,
-                            stock_name:rows[i].stock_name
+                            stock_name: rows[i].stock_name
                         };
                         table.push(data);
                     }
@@ -720,7 +719,7 @@ app.post('/execute_block', function (req, res) {
     console.log('block executed');
 });
 app.get('/get_index', function (req, res) {
-    res.json({sensex:12014,nifty:5514});
+    res.json({ sensex: 12014, nifty: 5514 });
     res.end();
 });
 //server listening..........
